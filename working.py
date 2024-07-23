@@ -61,14 +61,13 @@ def main():
         'Word Count': st.number_input("Word Count", value=500, min_value=0),
     }
 
-    unique_inlinks_threshold = st.number_input("Unique Inlinks Threshold", value=0, min_value=0)
-    apply_unique_inlinks_threshold = st.checkbox("Apply Unique Inlinks threshold", value=True)
-
     older_than = st.date_input("Older than", value=pd.to_datetime("2023-01-01"))
 
     threshold_checks = {}
     for key in thresholds:
         threshold_checks[key] = st.checkbox(f"Apply {key} threshold", value=True)
+    unique_inlinks_threshold = st.number_input("Unique Inlinks Threshold", value=0, min_value=0)
+    apply_unique_inlinks_threshold = st.checkbox("Apply Unique Inlinks threshold", value=True)
 
     output_mode = st.radio("Output mode", ["Show all URLs", "Show only URLs with actions"])
 
