@@ -48,32 +48,22 @@ def main():
 
     uploaded_file = st.file_uploader("Select CSV file", type="csv")
 
-    st.write("Set thresholds and select which to apply:")
-
-    thresholds = {}
-    threshold_checks = {}
-
-    for key in ['Sessions', 'Views', 'Clicks', 'Impressions', 'Average position', 'Backlinks', 'Word Count', 'Unique Inlinks']:
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            value = st.number_input(
-                key, 
-                value=1000 if key in ['Sessions', 'Views'] else
-                      50 if key == 'Clicks' else
-                      500 if key == 'Impressions' else
-                      19.0 if key == 'Average position' else
-                      1 if key == 'Backlinks' else
-                      500 if key == 'Word Count' else
-                      0,  # Default for Unique Inlinks
-                min_value=0.0 if key == 'Average position' else 0,
-                step=0.1 if key == 'Average position' else 1
-            )
-        with col2:
-            threshold_checks[key] = st.checkbox('', value=True, key=f"check_{key}")
-        
-        thresholds[key] = value
+    thresholds = {
+        'Sessions': st.number_input("Sessions", value=1000, min_value=0),
+        'Views': st.number_input("Views", value=1000, min_value=0),
+        'Clicks': st.number_input("Clicks", value=50, min_value=0),
+        'Impressions': st.number_input("Impressions", value=500, min_value=0),
+        'Average position': st.number_input("Average position", value=19.0, min_value=0.0),
+        'Backlinks': st.number_input("Backlinks", value=1, min_value=0),
+        'Word Count': st.number_input("Word Count", value=500, min_value=0),
+        'Unique Inlinks': st.number_input("Unique Inlinks", value=0, min_value=0),
+    }
 
     older_than = st.date_input("Older than", value=pd.to_datetime("2023-01-01"))
+
+    threshold_checks = {}
+    for key in thresholds:
+        threshold_checks[key] = st.checkbox(f"Apply {key} threshold", value=True)
 
     output_mode = st.radio("Output mode", ["Show all URLs", "Show only URLs with actions"])
 
