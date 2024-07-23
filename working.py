@@ -14,6 +14,7 @@ def parse_date(date_string):
 def process_data(data, thresholds, older_than_date):
     data['Average position'] = data['Average position'].astype(float)
     data['Laatste wijziging'] = data['Laatste wijziging'].astype(str).apply(parse_date)
+    data['Unique Inlinks'] = data['Unique Inlinks'].astype(int)
 
     def should_delete(row):
         conditions = []
@@ -49,59 +50,49 @@ def main():
 
     st.write("Set thresholds and select which to apply:")
 
-thresholds = {}
-threshold_checks = {}
-
-for key in ['Sessions', 'Views', 'Clicks', 'Impressions', 'Average position', 'Backlinks', 'Word Count', 'Unique Inlinks']:
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        value = st.number_input(
-            key, 
-            value=1000 if key in ['Sessions', 'Views'] else
-                  50 if key == 'Clicks' else
-                  500 if key == 'Impressions' else
-                  19.0 if key == 'Average position' else
-                  1 if key == 'Backlinks' else
-                  500 if key == 'Word Count' else
-                  0,  # Default for Unique Inlinks
-            min_value=0.0 if key == 'Average position' else 0,
-            step=0.1 if key == 'Average position' else 1
-        )
-    with col2:
-        threshold_checks[key] = st.checkbox('', value=True, key=f"check_{key}")
-    
-    thresholds[key] = value
-
-older_than = st.date_input("Older than", value=pd.to_datetime("2023-01-01"))
-
+    thresholds = {}
     threshold_checks = {}
-    for key in thresholds:
-        threshold_checks[key] = st.checkbox(f"Apply {key} threshold", value=True)
+
+    for key in ['Sessions', 'Views', 'Clicks', 'Impressions', 'Average position', 'Backlinks', 'Word Count', 'Unique Inlinks']:
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            value = st.number_input(
+                key, 
+                value=1000 if key in ['Sessions', 'Views'] else
+                      50 if key == 'Clicks' else
+                      500 if key == 'Impressions' else
+                      19.0 if key == 'Average position' else
+                      1 if key == 'Backlinks' else
+                      500 if key == 'Word Count' else
+                      0,  # Default for Unique Inlinks
+                min_value=0.0 if key == 'Average position' else 0,
+                step=0.1 if key == 'Average position' else 1
+            )
+        with col2:
+            threshold_checks[key] = st.checkbox('', value=True, key=f"check_{key}")
+        
+        thresholds[key] = value
+
+    older_than = st.date_input("Older than", value=pd.to_datetime("2023-01-01"))
 
     output_mode = st.radio("Output mode", ["Show all URLs", "Show only URLs with actions"])
 
-    # Add a "Start" button
     start_button = st.button("Start Processing")
 
     if start_button and uploaded_file is not None:
         try:
-            # Read the CSV content
             csv_content = uploaded_file.getvalue().decode('utf-8')
-            # Use CSV Sniffer to detect the delimiter
             dialect = csv.Sniffer().sniff(csv_content[:1024])
             delimiter = dialect.delimiter
-            # Use StringIO to create a file-like object from the CSV content
             csv_file = io.StringIO(csv_content)
-            # Read the CSV using the detected delimiter
             data = pd.read_csv(csv_file, delimiter=delimiter)
 
-            required_columns = ['Sessions', 'Views', 'Clicks', 'Impressions', 'Average position', 'Ahrefs Backlinks - Exact', 'Word Count', 'Laatste wijziging']
+            required_columns = ['Sessions', 'Views', 'Clicks', 'Impressions', 'Average position', 'Ahrefs Backlinks - Exact', 'Word Count', 'Laatste wijziging', 'Unique Inlinks']
             missing_columns = [col for col in required_columns if col not in data.columns]
 
             if missing_columns:
                 st.error(f"Missing columns in CSV: {', '.join(missing_columns)}")
             else:
-                # Apply thresholds based on checkbox states
                 applied_thresholds = {k: v for k, v in thresholds.items() if threshold_checks[k]}
 
                 processed_data = process_data(data, applied_thresholds, older_than)
@@ -115,11 +106,15 @@ older_than = st.date_input("Older than", value=pd.to_datetime("2023-01-01"))
                     st.write("No URLs require action.")
                 else:
                     st.dataframe(action_data)
-
+                    
                     csv_string = action_data.to_csv(index=False)
-                    b64 = base64.b64encode(csv_string.encode()).decode()
-                    href = f'<a href="data:file/csv;base64,{b64}" download="processed_data.csv">Download CSV File</a>'
-                    st.markdown(href, unsafe_allow_html=True)
+                    
+                    st.download_button(
+                        label="Download CSV",
+                        data=csv_string,
+                        file_name="processed_data.csv",
+                        mime="text/csv"
+                    )
 
         except Exception as e:
             st.error(f"Failed to process CSV file: {str(e)}")
