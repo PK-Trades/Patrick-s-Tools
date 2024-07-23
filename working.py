@@ -1,93 +1,92 @@
+import streamlit as st
 import pandas as pd
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-import csv
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import Flow
+from googleapiclient.discovery import build
+from google.auth.transport.requests import Request
 import os
 
-def process_csv(file_path):
-    try:
-        df = pd.read_csv(file_path)
-        print(f"Successfully loaded CSV file: {file_path}")
-        return df
-    except Exception as e:
-        print(f"Error loading CSV file: {e}")
-        return None
-
-def process_google_sheet(sheet_id, worksheet_name):
-    try:
-        # Set up credentials
-        scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-        creds_file = 'path/to/your/credentials.json'
-        
-        if not os.path.exists(creds_file):
-            print(f"Credentials file not found: {creds_file}")
-            return None
-        
-        creds = ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
-        client = gspread.authorize(creds)
-
-        # Open the sheet
-        sheet = client.open_by_key(sheet_id).worksheet(worksheet_name)
-
-        # Get all values
-        data = sheet.get_all_values()
-
-        # Convert to dataframe
-        df = pd.DataFrame(data[1:], columns=data[0])
-        print(f"Successfully loaded Google Sheet: {sheet_id}, Worksheet: {worksheet_name}")
-        return df
-    except Exception as e:
-        print(f"Error loading Google Sheet: {e}")
-        return None
-
-def process_data(df):
-    if df is not None and not df.empty:
-        # Example processing: calculate mean of numeric columns
-        numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
-        if not numeric_cols.empty:
-            means = df[numeric_cols].mean()
-            print("\nMean values of numeric columns:")
-            print(means)
-        else:
-            print("No numeric columns found for processing.")
-        
-        # Example processing: count unique values in string columns
-        string_cols = df.select_dtypes(include=['object']).columns
-        if not string_cols.empty:
-            unique_counts = df[string_cols].nunique()
-            print("\nUnique value counts in string columns:")
-            print(unique_counts)
-        else:
-            print("No string columns found for processing.")
-    else:
-        print("No data to process.")
+# Set up OAuth 2.0 flow
+flow = Flow.from_client_secrets_file(
+    'path/to/your/client_secret.json',
+    scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/userinfo.email']
+)
+flow.redirect_uri = 'http://localhost:8501'  # Update this with your deployed app URL
 
 def main():
-    while True:
-        input_type = input("Enter 'csv' for CSV file, 'sheet' for Google Sheet, or 'quit' to exit: ").lower()
+    st.title("Google Sheets Integration with OAuth")
 
-        if input_type == 'quit':
-            print("Exiting the program.")
-            break
+    if 'credentials' not in st.session_state:
+        st.session_state.credentials = None
 
-        if input_type == 'csv':
-            file_path = input("Enter the path to your CSV file: ")
-            df = process_csv(file_path)
-        elif input_type == 'sheet':
-            sheet_id = input("Enter the Google Sheet ID: ")
-            worksheet_name = input("Enter the worksheet name: ")
-            df = process_google_sheet(sheet_id, worksheet_name)
+    if st.session_state.credentials is None:
+        if 'code' not in st.experimental_get_query_params():
+            auth_url, _ = flow.authorization_url(prompt='consent')
+            st.markdown(f'Please [login with Google]({auth_url})')
         else:
-            print("Invalid input type. Please enter 'csv', 'sheet', or 'quit'.")
-            continue
+            code = st.experimental_get_query_params()['code'][0]
+            flow.fetch_token(code=code)
+            st.session_state.credentials = flow.credentials
+            st.experimental_rerun()
+    else:
+        credentials = st.session_state.credentials
+        if credentials and credentials.expired and credentials.refresh_token:
+            credentials.refresh(Request())
 
-        if df is not None:
-            print("\nFirst few rows of the data:")
-            print(df.head())
-            
-            process_data(df)
-        
-        print("\n" + "="*50 + "\n")
+        service = build('sheets', 'v4', credentials=credentials)
+
+        # File upload
+        uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+        if uploaded_file is not None:
+            df = pd.read_csv(uploaded_file)
+            st.write("Uploaded Data:")
+            st.write(df)
+
+            # Upload to Google Sheets
+            sheet_id = st.text_input("Enter Google Sheet ID for upload:")
+            worksheet_name = st.text_input("Enter Worksheet name for upload:")
+            if st.button("Upload to Google Sheets"):
+                try:
+                    body = {
+                        'values': [df.columns.tolist()] + df.values.tolist()
+                    }
+                    result = service.spreadsheets().values().update(
+                        spreadsheetId=sheet_id, range=f'{worksheet_name}!A1',
+                        valueInputOption='RAW', body=body).execute()
+                    st.success(f"Data uploaded successfully! {result.get('updatedCells')} cells updated.")
+                except Exception as e:
+                    st.error(f"Error uploading to Google Sheet: {e}")
+
+        # Download from Google Sheets
+        st.header("Download from Google Sheets")
+        download_sheet_id = st.text_input("Enter Google Sheet ID for download:")
+        download_worksheet_name = st.text_input("Enter Worksheet name for download:")
+        if st.button("Download from Google Sheets"):
+            try:
+                result = service.spreadsheets().values().get(
+                    spreadsheetId=download_sheet_id, range=download_worksheet_name).execute()
+                values = result.get('values', [])
+                if not values:
+                    st.warning('No data found.')
+                else:
+                    df = pd.DataFrame(values[1:], columns=values[0])
+                    st.write("Downloaded Data:")
+                    st.write(df)
+                    
+                    # Option to download as CSV
+                    csv = df.to_csv(index=False)
+                    st.download_button(
+                        label="Download data as CSV",
+                        data=csv,
+                        file_name="downloaded_data.csv",
+                        mime="text/csv",
+                    )
+            except Exception as e:
+                st.error(f"Error downloading from Google Sheet: {e}")
+
+        if st.button("Logout"):
+            st.session_state.credentials = None
+            st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
