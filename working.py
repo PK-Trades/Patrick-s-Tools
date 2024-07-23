@@ -1,116 +1,93 @@
-import streamlit as st
 import pandas as pd
-from dateutil import parser
-import base64
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 import csv
-import io
+import os
 
-def parse_date(date_string):
+def process_csv(file_path):
     try:
-        return parser.parse(date_string).date()
-    except (ValueError, TypeError):
+        df = pd.read_csv(file_path)
+        print(f"Successfully loaded CSV file: {file_path}")
+        return df
+    except Exception as e:
+        print(f"Error loading CSV file: {e}")
         return None
 
-def process_data(data, thresholds, older_than_date):
-    data['Average position'] = data['Average position'].astype(float)
-    data['Laatste wijziging'] = data['Laatste wijziging'].astype(str).apply(parse_date)
-    data['Unique Inlinks'] = data['Unique Inlinks'].astype(int)
-
-    def should_delete(row):
-        conditions = []
-        for key, value in thresholds.items():
-            if key == 'Average position':
-                conditions.append(row[key] > value)
-            elif key in row:
-                conditions.append(row[key] < value)
+def process_google_sheet(sheet_id, worksheet_name):
+    try:
+        # Set up credentials
+        scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+        creds_file = 'path/to/your/credentials.json'
         
-        if older_than_date and row['Laatste wijziging']:
-            conditions.append(row['Laatste wijziging'] < older_than_date)
+        if not os.path.exists(creds_file):
+            print(f"Credentials file not found: {creds_file}")
+            return None
         
-        return all(conditions)
+        creds = ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
+        client = gspread.authorize(creds)
 
-    data['To Delete'] = data.apply(should_delete, axis=1)
-    data['Backlinks controleren'] = (data['To Delete'] &
-        (data['Ahrefs Backlinks - Exact'] > thresholds.get('Backlinks', float('inf'))))
-    
-    data['Action'] = 'Geen actie'
-    data.loc[data['To Delete'], 'Action'] = 'Verwijderen'
-    data.loc[data['Backlinks controleren'], 'Action'] = 'Backlinks controleren'
+        # Open the sheet
+        sheet = client.open_by_key(sheet_id).worksheet(worksheet_name)
 
-    return data
+        # Get all values
+        data = sheet.get_all_values()
+
+        # Convert to dataframe
+        df = pd.DataFrame(data[1:], columns=data[0])
+        print(f"Successfully loaded Google Sheet: {sheet_id}, Worksheet: {worksheet_name}")
+        return df
+    except Exception as e:
+        print(f"Error loading Google Sheet: {e}")
+        return None
+
+def process_data(df):
+    if df is not None and not df.empty:
+        # Example processing: calculate mean of numeric columns
+        numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
+        if not numeric_cols.empty:
+            means = df[numeric_cols].mean()
+            print("\nMean values of numeric columns:")
+            print(means)
+        else:
+            print("No numeric columns found for processing.")
+        
+        # Example processing: count unique values in string columns
+        string_cols = df.select_dtypes(include=['object']).columns
+        if not string_cols.empty:
+            unique_counts = df[string_cols].nunique()
+            print("\nUnique value counts in string columns:")
+            print(unique_counts)
+        else:
+            print("No string columns found for processing.")
+    else:
+        print("No data to process.")
 
 def main():
-    st.title("Patrick's Cleanup Tool")
-    st.write("Hier onder kun je aangeven waar je post minimaal aan moet voldoen om niet in aanmerking te komen voor verwijdering")
-    st.markdown("Maak een kopie van het template hieronder en vul deze met jouw data. "
-                "Vervolgens kun je hem hierboven uploaden en zal de tool aan de hand van de door jou ingestelde criteria de URLs die wegkunnen markeren")
-    st.markdown("[het template hieronder](https://docs.google.com/spreadsheets/d/1GtaLaXO62Rf8Xo2gNiw6wkAXrHoE-bBJr8Uf3_e8lNw/edit?usp=sharing)")
+    while True:
+        input_type = input("Enter 'csv' for CSV file, 'sheet' for Google Sheet, or 'quit' to exit: ").lower()
 
-    uploaded_file = st.file_uploader("Select CSV file", type="csv")
+        if input_type == 'quit':
+            print("Exiting the program.")
+            break
 
-    thresholds = {
-        'Sessions': st.number_input("Sessions", value=1000, min_value=0),
-        'Views': st.number_input("Views", value=1000, min_value=0),
-        'Clicks': st.number_input("Clicks", value=50, min_value=0),
-        'Impressions': st.number_input("Impressions", value=500, min_value=0),
-        'Average position': st.number_input("Average position", value=19.0, min_value=0.0),
-        'Backlinks': st.number_input("Backlinks", value=1, min_value=0),
-        'Word Count': st.number_input("Word Count", value=500, min_value=0),
-        'Unique Inlinks': st.number_input("Unique Inlinks", value=0, min_value=0),
-    }
+        if input_type == 'csv':
+            file_path = input("Enter the path to your CSV file: ")
+            df = process_csv(file_path)
+        elif input_type == 'sheet':
+            sheet_id = input("Enter the Google Sheet ID: ")
+            worksheet_name = input("Enter the worksheet name: ")
+            df = process_google_sheet(sheet_id, worksheet_name)
+        else:
+            print("Invalid input type. Please enter 'csv', 'sheet', or 'quit'.")
+            continue
 
-    older_than = st.date_input("Older than", value=pd.to_datetime("2023-01-01"))
-
-    threshold_checks = {}
-    for key in thresholds:
-        threshold_checks[key] = st.checkbox(f"Apply {key} threshold", value=True)
+        if df is not None:
+            print("\nFirst few rows of the data:")
+            print(df.head())
+            
+            process_data(df)
         
-    output_mode = st.radio("Output mode", ["Show all URLs", "Show only URLs with actions"])
-
-    start_button = st.button("Start Processing")
-
-    if start_button and uploaded_file is not None:
-        try:
-            csv_content = uploaded_file.getvalue().decode('utf-8')
-            dialect = csv.Sniffer().sniff(csv_content[:1024])
-            delimiter = dialect.delimiter
-            csv_file = io.StringIO(csv_content)
-            data = pd.read_csv(csv_file, delimiter=delimiter)
-
-            required_columns = ['Sessions', 'Views', 'Clicks', 'Impressions', 'Average position', 'Ahrefs Backlinks - Exact', 'Word Count', 'Laatste wijziging', 'Unique Inlinks']
-            missing_columns = [col for col in required_columns if col not in data.columns]
-
-            if missing_columns:
-                st.error(f"Missing columns in CSV: {', '.join(missing_columns)}")
-            else:
-                applied_thresholds = {k: v for k, v in thresholds.items() if threshold_checks[k]}
-
-                processed_data = process_data(data, applied_thresholds, older_than)
-
-                if output_mode == "Show only URLs with actions":
-                    action_data = processed_data[processed_data['Action'] != 'Geen actie']
-                else:
-                    action_data = processed_data
-
-                if action_data.empty:
-                    st.write("No URLs require action.")
-                else:
-                    st.dataframe(action_data)
-                    
-                    csv = action_data.to_csv(index=False)
-                    
-                    st.download_button(
-                        label="Download CSV",
-                        data=csv,
-                        file_name="processed_data.csv",
-                        mime="text/csv"
-                    )
-
-        except Exception as e:
-            st.error(f"Failed to process CSV file: {str(e)}")
-
-    elif start_button and uploaded_file is None:
-        st.error("Please upload a CSV file before starting the process.")
+        print("\n" + "="*50 + "\n")
 
 if __name__ == "__main__":
     main()
