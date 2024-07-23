@@ -14,7 +14,6 @@ def parse_date(date_string):
 def process_data(data, thresholds, older_than_date):
     data['Average position'] = data['Average position'].astype(float)
     data['Laatste wijziging'] = data['Laatste wijziging'].astype(str).apply(parse_date)
-    data['Unique Inlinks'] = data['Unique Inlinks'].astype(int)
 
     def should_delete(row):
         conditions = []
@@ -56,8 +55,8 @@ def main():
         'Average position': st.number_input("Average position", value=19.0, min_value=0.0),
         'Backlinks': st.number_input("Backlinks", value=1, min_value=0),
         'Word Count': st.number_input("Word Count", value=500, min_value=0),
-        'Unique Inlinks': st.number_input("Unique Inlinks", value=0, min_value=0),
-    }
+        'Unique Inlinks': st.number_input("Unique Inlinks", value=20, min_value=0),
+}
 
     older_than = st.date_input("Older than", value=pd.to_datetime("2023-01-01"))
 
@@ -67,22 +66,28 @@ def main():
 
     output_mode = st.radio("Output mode", ["Show all URLs", "Show only URLs with actions"])
 
+    # Add a "Start" button
     start_button = st.button("Start Processing")
 
     if start_button and uploaded_file is not None:
         try:
+            # Read the CSV content
             csv_content = uploaded_file.getvalue().decode('utf-8')
+            # Use CSV Sniffer to detect the delimiter
             dialect = csv.Sniffer().sniff(csv_content[:1024])
             delimiter = dialect.delimiter
+            # Use StringIO to create a file-like object from the CSV content
             csv_file = io.StringIO(csv_content)
+            # Read the CSV using the detected delimiter
             data = pd.read_csv(csv_file, delimiter=delimiter)
 
-            required_columns = ['Sessions', 'Views', 'Clicks', 'Impressions', 'Average position', 'Ahrefs Backlinks - Exact', 'Word Count', 'Laatste wijziging', 'Unique Inlinks']
+            required_columns = ['Sessions', 'Views', 'Clicks', 'Impressions', 'Average position', 'Ahrefs Backlinks - Exact', 'Word Count', 'Laatste wijziging']
             missing_columns = [col for col in required_columns if col not in data.columns]
 
             if missing_columns:
                 st.error(f"Missing columns in CSV: {', '.join(missing_columns)}")
             else:
+                # Apply thresholds based on checkbox states
                 applied_thresholds = {k: v for k, v in thresholds.items() if threshold_checks[k]}
 
                 processed_data = process_data(data, applied_thresholds, older_than)
@@ -96,15 +101,11 @@ def main():
                     st.write("No URLs require action.")
                 else:
                     st.dataframe(action_data)
-                    
+
                     csv_string = action_data.to_csv(index=False)
-                    
-                    st.download_button(
-                        label="Download CSV",
-                        data=csv_string,
-                        file_name="processed_data.csv",
-                        mime="text/csv"
-                    )
+                    b64 = base64.b64encode(csv_string.encode()).decode()
+                    href = f'<a href="data:file/csv;base64,{b64}" download="processed_data.csv">Download CSV File</a>'
+                    st.markdown(href, unsafe_allow_html=True)
 
         except Exception as e:
             st.error(f"Failed to process CSV file: {str(e)}")
