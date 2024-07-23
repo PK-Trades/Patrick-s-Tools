@@ -11,7 +11,7 @@ def parse_date(date_string):
     except (ValueError, TypeError):
         return None
 
-def process_data(data, thresholds, older_than_date, unique_inlinks_threshold, apply_unique_inlinks_threshold):
+def process_data(data, thresholds, older_than_date):
     data['Average position'] = data['Average position'].astype(float)
     data['Laatste wijziging'] = data['Laatste wijziging'].astype(str).apply(parse_date)
     data['Unique Inlinks'] = data['Unique Inlinks'].astype(int)
@@ -26,9 +26,6 @@ def process_data(data, thresholds, older_than_date, unique_inlinks_threshold, ap
         
         if older_than_date and row['Laatste wijziging']:
             conditions.append(row['Laatste wijziging'] < older_than_date)
-        
-        if apply_unique_inlinks_threshold:
-            conditions.append(row['Unique Inlinks'] < unique_inlinks_threshold)
         
         return all(conditions)
 
@@ -59,17 +56,16 @@ def main():
         'Average position': st.number_input("Average position", value=19.0, min_value=0.0),
         'Backlinks': st.number_input("Backlinks", value=1, min_value=0),
         'Word Count': st.number_input("Word Count", value=500, min_value=0),
-        'Unique Inlinks' : st.number_input("Unique Inlinks Threshold", value=0, min_value=0)
-    }
+        'Unique Inlinks': st.number_input("Unique Inlinks", value=0, min_value=0),
+}
+
 
     older_than = st.date_input("Older than", value=pd.to_datetime("2023-01-01"))
 
     threshold_checks = {}
-    for key in thresholds:
-        threshold_checks[key] = st.checkbox(f"Apply {key} threshold", value=True)
-    
-    apply_unique_inlinks_threshold = st.checkbox("Apply Unique Inlinks threshold", value=True)
-
+for key in thresholds:
+    threshold_checks[key] = st.checkbox(f"Apply {key} threshold", value=True)
+        
     output_mode = st.radio("Output mode", ["Show all URLs", "Show only URLs with actions"])
 
     start_button = st.button("Start Processing")
