@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 from dateutil import parser
 import base64
+import csv
+import io
 
 def parse_date(date_string):
     try:
@@ -55,7 +57,18 @@ def main():
 
     if uploaded_file is not None:
         try:
-            data = pd.read_csv(uploaded_file)
+            # Read the CSV content
+            csv_content = uploaded_file.getvalue().decode('utf-8')
+            
+            # Use CSV Sniffer to detect the delimiter
+            dialect = csv.Sniffer().sniff(csv_content[:1024])
+            delimiter = dialect.delimiter
+
+            # Use StringIO to create a file-like object from the CSV content
+            csv_file = io.StringIO(csv_content)
+            
+            # Read the CSV using the detected delimiter
+            data = pd.read_csv(csv_file, delimiter=delimiter)
 
             required_columns = ['Sessions', 'Views', 'Clicks', 'Impressions', 'Average position', 'Ahrefs Backlinks - Exact', 'Word Count', 'Laatste wijziging']
             missing_columns = [col for col in required_columns if col not in data.columns]
