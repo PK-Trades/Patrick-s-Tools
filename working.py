@@ -55,6 +55,7 @@ def main():
         'Average position': st.number_input("Average position", value=19.0, min_value=0.0),
         'Backlinks': st.number_input("Backlinks", value=1, min_value=0),
         'Word Count': st.number_input("Word Count", value=500, min_value=0),
+        'Unique Inlinks': st.number_input("Unique Inlinks", value=0, min_value=0),
     }
 
     older_than = st.date_input("Older than", value=pd.to_datetime("2023-01-01"))
