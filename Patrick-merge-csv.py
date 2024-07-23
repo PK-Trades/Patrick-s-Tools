@@ -70,6 +70,7 @@ if file1 and file2:
                 data=csv,
                 file_name="merged_csv.csv",
                 mime="text/csv"
+            st.markdown("*De tool laat een paar URLs zien zodat je kunt controleren of de output klopt voordat je de CSV download*")
             )
 else:
     st.info("Please upload both CSV files to merge.")
