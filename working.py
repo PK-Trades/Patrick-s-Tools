@@ -11,7 +11,7 @@ def parse_date(date_string):
     except (ValueError, TypeError):
         return None
 
-def process_data(data, thresholds, older_than_date, unique_inlinks_threshold):
+def process_data(data, thresholds, older_than_date, unique_inlinks_threshold, apply_unique_inlinks_threshold):
     data['Average position'] = data['Average position'].astype(float)
     data['Laatste wijziging'] = data['Laatste wijziging'].astype(str).apply(parse_date)
     data['Unique Inlinks'] = data['Unique Inlinks'].astype(int)
@@ -27,8 +27,8 @@ def process_data(data, thresholds, older_than_date, unique_inlinks_threshold):
         if older_than_date and row['Laatste wijziging']:
             conditions.append(row['Laatste wijziging'] < older_than_date)
         
-        # Add condition for Unique Inlinks
-        conditions.append(row['Unique Inlinks'] < unique_inlinks_threshold)
+        if apply_unique_inlinks_threshold:
+            conditions.append(row['Unique Inlinks'] < unique_inlinks_threshold)
         
         return all(conditions)
 
@@ -62,6 +62,7 @@ def main():
     }
 
     unique_inlinks_threshold = st.number_input("Unique Inlinks Threshold", value=0, min_value=0)
+    apply_unique_inlinks_threshold = st.checkbox("Apply Unique Inlinks threshold", value=True)
 
     older_than = st.date_input("Older than", value=pd.to_datetime("2023-01-01"))
 
@@ -71,19 +72,14 @@ def main():
 
     output_mode = st.radio("Output mode", ["Show all URLs", "Show only URLs with actions"])
 
-    # Add a "Start" button
     start_button = st.button("Start Processing")
 
     if start_button and uploaded_file is not None:
         try:
-            # Read the CSV content
             csv_content = uploaded_file.getvalue().decode('utf-8')
-            # Use CSV Sniffer to detect the delimiter
             dialect = csv.Sniffer().sniff(csv_content[:1024])
             delimiter = dialect.delimiter
-            # Use StringIO to create a file-like object from the CSV content
             csv_file = io.StringIO(csv_content)
-            # Read the CSV using the detected delimiter
             data = pd.read_csv(csv_file, delimiter=delimiter)
 
             required_columns = ['Sessions', 'Views', 'Clicks', 'Impressions', 'Average position', 'Ahrefs Backlinks - Exact', 'Word Count', 'Laatste wijziging', 'Unique Inlinks']
@@ -92,10 +88,9 @@ def main():
             if missing_columns:
                 st.error(f"Missing columns in CSV: {', '.join(missing_columns)}")
             else:
-                # Apply thresholds based on checkbox states
                 applied_thresholds = {k: v for k, v in thresholds.items() if threshold_checks[k]}
 
-                processed_data = process_data(data, applied_thresholds, older_than, unique_inlinks_threshold)
+                processed_data = process_data(data, applied_thresholds, older_than, unique_inlinks_threshold, apply_unique_inlinks_threshold)
 
                 if output_mode == "Show only URLs with actions":
                     action_data = processed_data[processed_data['Action'] != 'Geen actie']
@@ -107,10 +102,8 @@ def main():
                 else:
                     st.dataframe(action_data)
                     
-                    # Create a CSV string
                     csv = action_data.to_csv(index=False)
                     
-                    # Create a download button
                     st.download_button(
                         label="Download CSV",
                         data=csv,
