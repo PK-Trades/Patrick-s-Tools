@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from streamlit_calendar import calendar
+import calendar
 from datetime import datetime
 
 def load_data(file):
@@ -30,25 +30,12 @@ def create_pnl_graph(df):
                       yaxis_title='Cumulative P/L')
     return fig
 
-def create_calendar_events(df):
+def create_calendar_data(df):
     daily_data = df.groupby(df['Date/Time'].dt.date).agg({
         'Net P/L': 'sum',
         'Symbol': 'count'
     }).reset_index()
-
-    events = []
-    for _, row in daily_data.iterrows():
-        date = row['Date/Time'].strftime('%Y-%m-%d')
-        pnl = row['Net P/L']
-        trades = row['Symbol']
-        color = 'green' if pnl > 0 else 'red'
-        events.append({
-            'title': f'${pnl:.2f}\n{trades} trades',
-            'start': date,
-            'backgroundColor': color,
-            'textColor': 'white'
-        })
-    return events
+    return daily_data
 
 st.title('Trade Journal')
 
@@ -81,16 +68,41 @@ if uploaded_file is not None:
     st.plotly_chart(fig)
     
     st.subheader('Trade Calendar')
-    events = create_calendar_events(df)
-    calendar_options = {
-        "headerToolbar": {
-            "left": "prev,next today",
-            "center": "title",
-            "right": "dayGridMonth,timeGridWeek,timeGridDay",
-        },
-        "initialView": "dayGridMonth",
-        "selectable": True,
-        "editable": False,
-        "events": events
-    }
-    calendar(events=events, options=calendar_options)
+    daily_data = create_calendar_data(df)
+    
+    # Display calendar
+    current_date = datetime.now()
+    year = st.selectbox('Select Year', range(df['Date/Time'].dt.year.min(), df['Date/Time'].dt.year.max() + 1), index=current_date.year - df['Date/Time'].dt.year.min())
+    month = st.selectbox('Select Month', range(1, 13), index=current_date.month - 1)
+    
+    cal = calendar.monthcalendar(year, month)
+    
+    # Create a DataFrame for the selected month
+    month_data = daily_data[
+        (daily_data['Date/Time'].dt.year == year) & 
+        (daily_data['Date/Time'].dt.month == month)
+    ]
+    
+    # Display calendar
+    st.write(f"Calendar for {calendar.month_name[month]} {year}")
+    
+    # Create calendar table
+    table_data = [["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]]
+    for week in cal:
+        week_data = []
+        for day in week:
+            if day == 0:
+                week_data.append("")
+            else:
+                date = pd.Timestamp(year=year, month=month, day=day)
+                day_data = month_data[month_data['Date/Time'].dt.date == date.date()]
+                if not day_data.empty:
+                    pnl = day_data['Net P/L'].values[0]
+                    trades = day_data['Symbol'].values[0]
+                    cell_content = f"{day}\n${pnl:.2f}\n{trades} trades"
+                else:
+                    cell_content = str(day)
+                week_data.append(cell_content)
+        table_data.append(week_data)
+    
+    st.table(table_data)
