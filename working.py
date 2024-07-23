@@ -11,7 +11,29 @@ flow = Flow.from_client_secrets_file(
     'path/to/your/client_secret.json',
     scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/userinfo.email']
 )
-flow.redirect_uri = 'http://localhost:8501'  # Update this with your deployed app URL
+flow.redirect_uri = 'https://working.streamlit.app/'  # Update this with your deployed app URL
+
+def process_data(df):
+    if df is not None and not df.empty:
+        # Calculate mean of numeric columns
+        numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
+        if not numeric_cols.empty:
+            means = df[numeric_cols].mean()
+            st.subheader("Mean values of numeric columns:")
+            st.write(means)
+        else:
+            st.write("No numeric columns found for processing.")
+
+        # Count unique values in string columns
+        string_cols = df.select_dtypes(include=['object']).columns
+        if not string_cols.empty:
+            unique_counts = df[string_cols].nunique()
+            st.subheader("Unique value counts in string columns:")
+            st.write(unique_counts)
+        else:
+            st.write("No string columns found for processing.")
+    else:
+        st.write("No data to process.")
 
 def main():
     st.title("Google Sheets Integration with OAuth")
@@ -35,14 +57,13 @@ def main():
 
         service = build('sheets', 'v4', credentials=credentials)
 
-        # File upload
+        st.header("Upload CSV to Google Sheets")
         uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
         if uploaded_file is not None:
             df = pd.read_csv(uploaded_file)
             st.write("Uploaded Data:")
             st.write(df)
 
-            # Upload to Google Sheets
             sheet_id = st.text_input("Enter Google Sheet ID for upload:")
             worksheet_name = st.text_input("Enter Worksheet name for upload:")
             if st.button("Upload to Google Sheets"):
@@ -57,7 +78,9 @@ def main():
                 except Exception as e:
                     st.error(f"Error uploading to Google Sheet: {e}")
 
-        # Download from Google Sheets
+            st.subheader("Data Processing Results:")
+            process_data(df)
+
         st.header("Download from Google Sheets")
         download_sheet_id = st.text_input("Enter Google Sheet ID for download:")
         download_worksheet_name = st.text_input("Enter Worksheet name for download:")
@@ -73,7 +96,6 @@ def main():
                     st.write("Downloaded Data:")
                     st.write(df)
                     
-                    # Option to download as CSV
                     csv = df.to_csv(index=False)
                     st.download_button(
                         label="Download data as CSV",
@@ -81,6 +103,9 @@ def main():
                         file_name="downloaded_data.csv",
                         mime="text/csv",
                     )
+
+                    st.subheader("Data Processing Results:")
+                    process_data(df)
             except Exception as e:
                 st.error(f"Error downloading from Google Sheet: {e}")
 
