@@ -16,7 +16,7 @@ def process_data(data, thresholds, older_than_date):
     data['Laatste wijziging'] = data['Laatste wijziging'].astype(str).apply(parse_date)
     data['Unique Inlinks'] = data['Unique Inlinks'].astype(int)
 
-    def should_delete(row):
+def should_delete(row):
     conditions = []
     for key, value in thresholds.items():
         if key == 'Average position':
