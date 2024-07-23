@@ -23,8 +23,8 @@ def merge_csvs(file1, file2):
     delimiter2 = detect_delimiter(file2)
 
     # Read the CSV files with detected delimiters
-    df1 = pd.read_csv(file1, sep=delimiter1, encoding='utf-8')
-    df2 = pd.read_csv(file2, sep=delimiter2, encoding='utf-8')
+    df1 = pd.read_csv(file1, sep=delimiter1, encoding='utf-8', index_col=False)
+    df2 = pd.read_csv(file2, sep=delimiter2, encoding='utf-8', index_col=False)
 
     # Strip whitespace from column names
     df1.columns = df1.columns.str.strip()
@@ -39,15 +39,15 @@ def merge_csvs(file1, file2):
     df1 = standardize_urls(df1)
     df2 = standardize_urls(df2)
 
-    #Drop Unnamed:3 column
-    merged_df = merged_df.drop(columns=['Unnamed: 3'], errors='ignore')
-
     # Merge the dataframes on the URL column
     merged_df = pd.merge(df1, df2, on='URL', how='inner')
 
     if merged_df.empty:
         st.warning("No matching URLs found between the two files.")
         return None
+
+    # Drop the 'Unnamed: 3' column if it exists
+    merged_df = merged_df.drop(columns=['Unnamed: 3'], errors='ignore')
 
     return merged_df
 
