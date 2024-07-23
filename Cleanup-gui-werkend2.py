@@ -51,7 +51,12 @@ def main():
         'Backlinks': st.number_input("Backlinks", value=1, min_value=0),
         'Word Count': st.number_input("Word Count", value=500, min_value=0),
     }
+    
     older_than = st.date_input("Older than", value=pd.to_datetime("2023-01-01"))
+
+    threshold_checks = {}
+    for key in thresholds:
+        threshold_checks[key] = st.checkbox(f"Apply {key} threshold", value=True)
 
     output_mode = st.radio("Output mode", ["Show all URLs", "Show only URLs with actions"])
 
@@ -76,7 +81,9 @@ def main():
             if missing_columns:
                 st.error(f"Missing columns in CSV: {', '.join(missing_columns)}")
             else:
-                processed_data = process_data(data, thresholds, older_than)
+                # Apply thresholds based on checkbox states
+                applied_thresholds = {k: v for k, v in thresholds.items() if threshold_checks[k]}
+                processed_data = process_data(data, applied_thresholds, older_than)
 
                 if output_mode == "Show only URLs with actions":
                     action_data = processed_data[processed_data['Action'] != 'Geen actie']
@@ -88,8 +95,8 @@ def main():
                 else:
                     st.dataframe(action_data)
 
-                    csv = action_data.to_csv(index=False)
-                    b64 = base64.b64encode(csv.encode()).decode()
+                    csv_string = action_data.to_csv(index=False)
+                    b64 = base64.b64encode(csv_string.encode()).decode()
                     href = f'<a href="data:file/csv;base64,{b64}" download="results.csv">Download CSV File</a>'
                     st.markdown(href, unsafe_allow_html=True)
 
