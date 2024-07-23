@@ -16,19 +16,21 @@ def process_data(data, thresholds, older_than_date):
     data['Laatste wijziging'] = data['Laatste wijziging'].astype(str).apply(parse_date)
 
     def should_delete(row):
-        conditions = [
-            row['Sessions'] < thresholds['Sessions'],
-            row['Views'] < thresholds['Views'],
-            row['Clicks'] < thresholds['Clicks'],
-            row['Impressions'] < thresholds['Impressions'],
-            row['Average position'] > thresholds['Average position'],
-            row['Word Count'] < thresholds['Word Count'],
-            row['Laatste wijziging'] < older_than_date if older_than_date and row['Laatste wijziging'] else False
-        ]
+        conditions = []
+        for key, value in thresholds.items():
+            if key == 'Average position':
+                conditions.append(row[key] > value)
+            elif key in row:
+                conditions.append(row[key] < value)
+        
+        if older_than_date and row['Laatste wijziging']:
+            conditions.append(row['Laatste wijziging'] < older_than_date)
+        
         return all(conditions)
 
     data['To Delete'] = data.apply(should_delete, axis=1)
-    data['Backlinks controleren'] = (data['To Delete'] & (data['Ahrefs Backlinks - Exact'] > thresholds['Backlinks']))
+    data['Backlinks controleren'] = (data['To Delete'] & 
+                                     (data['Ahrefs Backlinks - Exact'] > thresholds.get('Backlinks', float('inf'))))
     data['Action'] = 'Geen actie'
     data.loc[data['To Delete'], 'Action'] = 'Verwijderen'
     data.loc[data['Backlinks controleren'], 'Action'] = 'Backlinks controleren'
