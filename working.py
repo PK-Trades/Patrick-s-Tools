@@ -41,7 +41,7 @@ def process_data(data, thresholds, older_than_date):
 
 def main():
     st.title("Patrick's Cleanup Tool")
-    st.markdown("Hier onder kun je aangeven waar je post MINIMAAL aan moet voldoen om NIET in aanmerking te komen voor verwijdering.") 
+    st.markdown("Hier onder kun je aangeven waar je post :blue-background[minimaal] aan moet voldoen om :blue-background[niet] in aanmerking te komen voor verwijdering.") 
     st.markdown("Wanneer je dus een waarde van 1000 invult bij Sessions komen alle URLs met minder dan 1000 sessie in aanmerking voor verwijderen (als alle overige metrics ook kloppen)")
     st.markdown("Maak een kopie van het template hieronder en vul deze met jouw data. "
                 "Vervolgens kun je hem hierboven uploaden en zal de tool aan de hand van de door jou ingestelde criteria de URLs die wegkunnen markeren")
