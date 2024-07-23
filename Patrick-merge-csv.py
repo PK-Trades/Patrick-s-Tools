@@ -39,6 +39,9 @@ def merge_csvs(file1, file2):
     df1 = standardize_urls(df1)
     df2 = standardize_urls(df2)
 
+    #Drop Unnamed:3 column
+    merged_df = merged_df.drop(columns=['Unnamed: 3'], errors='ignore')
+
     # Merge the dataframes on the URL column
     merged_df = pd.merge(df1, df2, on='URL', how='inner')
 
