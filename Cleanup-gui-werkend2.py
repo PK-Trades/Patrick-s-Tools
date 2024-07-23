@@ -60,7 +60,10 @@ def main():
 
     output_mode = st.radio("Output mode", ["Show all URLs", "Show only URLs with actions"])
 
-    if uploaded_file is not None:
+    # Add a "Start" button
+    start_button = st.button("Start Processing")
+
+    if start_button and uploaded_file is not None:
         try:
             # Read the CSV content
             csv_content = uploaded_file.getvalue().decode('utf-8')
@@ -102,6 +105,9 @@ def main():
 
         except Exception as e:
             st.error(f"Failed to process CSV file: {str(e)}")
+
+    elif start_button and uploaded_file is None:
+        st.error("Please upload a CSV file before starting the process.")
 
     st.markdown("Maak een kopie van het template hieronder en vul deze met jouw data. "
                 "Vervolgens kun je hem hierboven uploaden en zal de tool aan de hand van de door jou ingestelde criteria de URLs die wegkunnen markeren")
