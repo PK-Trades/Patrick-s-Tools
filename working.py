@@ -97,11 +97,13 @@ def main():
                 else:
                     st.dataframe(action_data)
                     
-                    csv = action_data.to_csv(index=False)
+                    # Create a CSV string
+                    csv_string = action_data.to_csv(index=False)
                     
+                    # Create a download button
                     st.download_button(
                         label="Download CSV",
-                        data=csv,
+                        data=csv_string,
                         file_name="processed_data.csv",
                         mime="text/csv"
                     )
