@@ -57,14 +57,13 @@ def main():
         'Backlinks': st.number_input("Backlinks", value=1, min_value=0),
         'Word Count': st.number_input("Word Count", value=500, min_value=0),
         'Unique Inlinks': st.number_input("Unique Inlinks", value=0, min_value=0),
-}
-
+    }
 
     older_than = st.date_input("Older than", value=pd.to_datetime("2023-01-01"))
 
     threshold_checks = {}
-for key in thresholds:
-    threshold_checks[key] = st.checkbox(f"Apply {key} threshold", value=True)
+    for key in thresholds:
+        threshold_checks[key] = st.checkbox(f"Apply {key} threshold", value=True)
         
     output_mode = st.radio("Output mode", ["Show all URLs", "Show only URLs with actions"])
 
@@ -86,7 +85,7 @@ for key in thresholds:
             else:
                 applied_thresholds = {k: v for k, v in thresholds.items() if threshold_checks[k]}
 
-                processed_data = process_data(data, applied_thresholds, older_than, unique_inlinks_threshold, apply_unique_inlinks_threshold)
+                processed_data = process_data(data, applied_thresholds, older_than)
 
                 if output_mode == "Show only URLs with actions":
                     action_data = processed_data[processed_data['Action'] != 'Geen actie']
