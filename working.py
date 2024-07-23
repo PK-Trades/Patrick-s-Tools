@@ -16,18 +16,18 @@ def process_data(data, thresholds, older_than_date):
     data['Laatste wijziging'] = data['Laatste wijziging'].astype(str).apply(parse_date)
     data['Unique Inlinks'] = data['Unique Inlinks'].astype(int)
 
-def should_delete(row):
-    conditions = []
-    for key, value in thresholds.items():
-        if key == 'Average position':
-            conditions.append(row[key] > value)  # Higher is worse for position
-        elif key in row:
-            conditions.append(row[key] < value)  # Lower is worse for other metrics
-    
-    if older_than_date and row['Laatste wijziging']:
-        conditions.append(row['Laatste wijziging'] < older_than_date)
-    
-    return all(conditions)
+    def should_delete(row):
+        conditions = []
+        for key, value in thresholds.items():
+            if key == 'Average position':
+                conditions.append(row[key] > value)
+            elif key in row:
+                conditions.append(row[key] < value)
+        
+        if older_than_date and row['Laatste wijziging']:
+            conditions.append(row['Laatste wijziging'] < older_than_date)
+        
+        return all(conditions)
 
     data['To Delete'] = data.apply(should_delete, axis=1)
     data['Backlinks controleren'] = (data['To Delete'] &
@@ -64,7 +64,7 @@ def main():
     threshold_checks = {}
     for key in thresholds:
         threshold_checks[key] = st.checkbox(f"Apply {key} threshold", value=True)
-        
+
     output_mode = st.radio("Output mode", ["Show all URLs", "Show only URLs with actions"])
 
     start_button = st.button("Start Processing")
@@ -97,10 +97,8 @@ def main():
                 else:
                     st.dataframe(action_data)
                     
-                    # Create a CSV string
                     csv_string = action_data.to_csv(index=False)
                     
-                    # Create a download button
                     st.download_button(
                         label="Download CSV",
                         data=csv_string,
