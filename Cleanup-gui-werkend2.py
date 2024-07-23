@@ -42,6 +42,11 @@ def main():
 
     st.write("Hier onder kun je aangeven waar je post minimaal aan moet voldoen om niet in aanmerking te komen voor verwijdering")
 
+    st.markdown("Maak een kopie van het template hieronder en vul deze met jouw data. "
+                "Vervolgens kun je hem hierboven uploaden en zal de tool aan de hand van de door jou ingestelde criteria de URLs die wegkunnen markeren")
+    
+    st.markdown("[het template hieronder](https://docs.google.com/spreadsheets/d/1GtaLaXO62Rf8Xo2gNiw6wkAXrHoE-bBJr8Uf3_e8lNw/edit?usp=sharing)")
+
     uploaded_file = st.file_uploader("Select CSV file", type="csv")
 
     thresholds = {
@@ -110,11 +115,6 @@ def main():
 
     elif start_button and uploaded_file is None:
         st.error("Please upload a CSV file before starting the process.")
-
-    st.markdown("Maak een kopie van het template hieronder en vul deze met jouw data. "
-                "Vervolgens kun je hem hierboven uploaden en zal de tool aan de hand van de door jou ingestelde criteria de URLs die wegkunnen markeren")
-    
-    st.markdown("[het template hieronder](https://docs.google.com/spreadsheets/d/1GtaLaXO62Rf8Xo2gNiw6wkAXrHoE-bBJr8Uf3_e8lNw/edit?usp=sharing)")
 
 if __name__ == "__main__":
     main()
