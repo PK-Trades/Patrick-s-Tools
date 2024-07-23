@@ -52,7 +52,6 @@ def merge_csvs(file1, file2):
     return merged_df
 
 st.title("Patrick's CSV Merger")
-st.markdown("*De tool laat een paar URLs zien zodat je kunt controleren of de output klopt voordat je de CSV download*")
 
 file1 = st.file_uploader("Upload File 1", type="csv")
 file2 = st.file_uploader("Upload File 2", type="csv")
@@ -63,6 +62,8 @@ if file1 and file2:
         if merged_df is not None:
             st.success(f"Files merged successfully! Rows: {merged_df.shape[0]}, Columns: {merged_df.shape[1]}")
             st.dataframe(merged_df.head())
+
+st.markdown("*De tool laat een paar URLs zien zodat je kunt controleren of de output klopt voordat je de CSV download*")
 
             # Provide download link for merged CSV
             csv = merged_df.to_csv(index=False)
