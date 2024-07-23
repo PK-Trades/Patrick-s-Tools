@@ -53,7 +53,7 @@ def merge_csvs(file1, file2):
 
 st.title("Patrick's CSV Merger")
 
-st.markdown(":orange[*De tool laat een paar URLs zien zodat je kunt controleren of de output klopt voordat je de CSV download*]")
+st.markdown(":orange[*De tool laat na de merge een paar URLs zien zodat je kunt controleren of de output klopt voordat je de CSV download*]")
 
 file1 = st.file_uploader("Upload File 1", type="csv")
 file2 = st.file_uploader("Upload File 2", type="csv")
