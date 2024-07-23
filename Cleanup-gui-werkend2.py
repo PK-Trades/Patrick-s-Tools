@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import csv
 from dateutil import parser
 import base64
 
@@ -56,13 +55,7 @@ def main():
 
     if uploaded_file is not None:
         try:
-            # Detect delimiter
-            csv_text = uploaded_file.read().decode('utf-8')
-            dialect = csv.Sniffer().sniff(csv_text[:1024])
-            delimiter = dialect.delimiter
-
-            # Read CSV
-            data = pd.read_csv(uploaded_file, delimiter=delimiter)
+            data = pd.read_csv(uploaded_file)
 
             required_columns = ['Sessions', 'Views', 'Clicks', 'Impressions', 'Average position', 'Ahrefs Backlinks - Exact', 'Word Count', 'Laatste wijziging']
             missing_columns = [col for col in required_columns if col not in data.columns]
