@@ -59,6 +59,7 @@ def main():
         'Average position': st.number_input("Average position", value=19.0, min_value=0.0),
         'Backlinks': st.number_input("Backlinks", value=1, min_value=0),
         'Word Count': st.number_input("Word Count", value=500, min_value=0),
+        'Unique Inlinks' : st.number_input("Unique Inlinks Threshold", value=0, min_value=0)
     }
 
     older_than = st.date_input("Older than", value=pd.to_datetime("2023-01-01"))
@@ -66,7 +67,7 @@ def main():
     threshold_checks = {}
     for key in thresholds:
         threshold_checks[key] = st.checkbox(f"Apply {key} threshold", value=True)
-    unique_inlinks_threshold = st.number_input("Unique Inlinks Threshold", value=0, min_value=0)
+    
     apply_unique_inlinks_threshold = st.checkbox("Apply Unique Inlinks threshold", value=True)
 
     output_mode = st.radio("Output mode", ["Show all URLs", "Show only URLs with actions"])
