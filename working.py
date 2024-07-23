@@ -17,17 +17,17 @@ def process_data(data, thresholds, older_than_date):
     data['Unique Inlinks'] = data['Unique Inlinks'].astype(int)
 
     def should_delete(row):
-        conditions = []
-        for key, value in thresholds.items():
-            if key == 'Average position':
-                conditions.append(row[key] > value)
-            elif key in row:
-                conditions.append(row[key] < value)
-        
-        if older_than_date and row['Laatste wijziging']:
-            conditions.append(row['Laatste wijziging'] < older_than_date)
-        
-        return all(conditions)
+    conditions = []
+    for key, value in thresholds.items():
+        if key == 'Average position':
+            conditions.append(row[key] > value)  # Higher is worse for position
+        elif key in row:
+            conditions.append(row[key] < value)  # Lower is worse for other metrics
+    
+    if older_than_date and row['Laatste wijziging']:
+        conditions.append(row['Laatste wijziging'] < older_than_date)
+    
+    return all(conditions)
 
     data['To Delete'] = data.apply(should_delete, axis=1)
     data['Backlinks controleren'] = (data['To Delete'] &
