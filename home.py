@@ -14,4 +14,5 @@ st.markdown(
     Selecteer in de sidebar welke tool je wilt gebruiken.
     """
 st.link_button("Content Pruning Tool", "https://patrick-seo-tools.streamlit.app/patrick-content-pruning")
+st.link_button("Go to gallery", "https://streamlit.io/gallery")
 )
