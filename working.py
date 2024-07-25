@@ -7,7 +7,6 @@ import io
 ## Data Processing Functions
 
 ### Function to parse date strings
-
 def parse_date(date_string):
     try:
         return parser.parse(date_string).date()
@@ -15,7 +14,6 @@ def parse_date(date_string):
         return None
 
 ### Function to process data
-
 def process_data(data, thresholds, older_than_date):
     data['Average position'] = data['Average position'].astype(float)
     data['Laatste wijziging'] = data['Laatste wijziging'].astype(str).apply(parse_date)
@@ -48,7 +46,6 @@ def process_data(data, thresholds, older_than_date):
 ## UI Setup Functions
 
 ### Function to set up the UI
-
 def setup_ui():
     st.title("Patrick's Cleanup Tool")
     st.markdown("Hier onder kun je aangeven waar je post :blue-background[minimaal] aan moet voldoen om :blue-background[niet] in aanmerking te komen voor verwijdering.")
@@ -58,7 +55,6 @@ def setup_ui():
     st.markdown("[het template hieronder](https://docs.google.com/spreadsheets/d/1GtaLaXO62Rf8Xo2gNiw6wkAXrHoE-bBJr8Uf3_e8lNw/edit?usp=sharing)")
 
 ### Function to display results
-
 def display_results(data):
     if data.empty:
         st.write("No URLs require action.")
@@ -71,6 +67,23 @@ def display_results(data):
             file_name="processed_data.csv",
             mime="text/csv"
         )
+
+### Function to detect delimiter
+def detect_delimiter(file_content):
+    sniffer = csv.Sniffer()
+    try:
+        dialect = sniffer.sniff(file_content[:1024])
+        return dialect.delimiter
+    except:
+        # If sniffer fails, try common delimiters
+        common_delimiters = [',', ';', '\t', '|']
+        for delimiter in common_delimiters:
+            try:
+                pd.read_csv(io.StringIO(file_content), sep=delimiter, nrows=5)
+                return delimiter
+            except:
+                continue
+    return None
 
 ## Main Application Logic
 
@@ -99,10 +112,12 @@ def main():
     if start_button and uploaded_file is not None:
         try:
             csv_content = uploaded_file.getvalue().decode('utf-8')
-            dialect = csv.Sniffer().sniff(csv_content[:1024])
-            delimiter = dialect.delimiter
-            csv_file = io.StringIO(csv_content)
-            data = pd.read_csv(csv_file, delimiter=delimiter)
+            delimiter = detect_delimiter(csv_content)
+            if delimiter is None:
+                st.error("Could not determine delimiter. Please check your CSV file format.")
+                return
+            
+            data = pd.read_csv(io.StringIO(csv_content), delimiter=delimiter)
             required_columns = ['Sessions', 'Views', 'Clicks', 'Impressions', 'Average position', 'Ahrefs Backlinks - Exact', 'Word Count', 'Laatste wijziging', 'Unique Inlinks']
             missing_columns = [col for col in required_columns if col not in data.columns]
             if missing_columns:
@@ -111,7 +126,7 @@ def main():
                 applied_thresholds = {k: v for k, v in thresholds.items() if threshold_checks[k]}
                 processed_data = process_data(data, applied_thresholds, older_than)
                 if output_mode == "Show only URLs with actions":
-                    action_data = processed_data[processed_data['Action']!= 'Geen actie']
+                    action_data = processed_data[processed_data['Action'] != 'Geen actie']
                 else:
                     action_data = processed_data
                 display_results(action_data)
