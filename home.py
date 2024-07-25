@@ -15,4 +15,4 @@ st.markdown(
     """
 )
 
-st.page_link("patrick-content-pruning.py", label="Content Pruning Tool")
+st.page_link("pages/patrick-content-pruning.py", label="Content Pruning Tool")
