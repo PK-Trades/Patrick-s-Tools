@@ -109,6 +109,7 @@ def main():
         threshold_checks[key] = st.checkbox(f"Apply {key} threshold", value=True)
     output_mode = st.radio("Output mode", ["Show all URLs", "Show only URLs with actions"])
     start_button = st.button("Start Processing")
+    
     if start_button and uploaded_file is not None:
         try:
             csv_content = uploaded_file.getvalue().decode('utf-8')
@@ -117,11 +118,22 @@ def main():
                 st.error("Could not determine delimiter. Please check your CSV file format.")
                 return
             
-            data = pd.read_csv(io.StringIO(csv_content), delimiter=delimiter)
+            data = pd.read_csv(io.StringIO(csv_content), delimiter=delimiter, low_memory=False)
+            
+            # Display the first few rows of the DataFrame
+            st.write("Preview of the uploaded data:")
+            st.write(data.head())
+            
+            # Display all column names
+            st.write("Columns found in the CSV file:")
+            st.write(list(data.columns))
+            
             required_columns = ['Sessions', 'Views', 'Clicks', 'Impressions', 'Average position', 'Ahrefs Backlinks - Exact', 'Word Count', 'Laatste wijziging', 'Unique Inlinks']
             missing_columns = [col for col in required_columns if col not in data.columns]
+            
             if missing_columns:
                 st.error(f"Missing columns in CSV: {', '.join(missing_columns)}")
+                st.write("Please ensure your CSV file contains all required columns.")
             else:
                 applied_thresholds = {k: v for k, v in thresholds.items() if threshold_checks[k]}
                 processed_data = process_data(data, applied_thresholds, older_than)
@@ -132,6 +144,7 @@ def main():
                 display_results(action_data)
         except Exception as e:
             st.error(f"Failed to process CSV file: {str(e)}")
+            st.write("Error details:", traceback.format_exc())
     elif start_button and uploaded_file is None:
         st.error("Please upload a CSV file before starting the process.")
 
