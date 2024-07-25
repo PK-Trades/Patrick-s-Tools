@@ -90,6 +90,13 @@ def main():
         'Ahrefs Keywords Top 3 - Exact': st.number_input("Ahrefs Keywords Top 3 - Exact", value=1, min_value=0),
         'Ahrefs Keywords Top 10 - Exact': st.number_input("Ahrefs Keywords Top 10 - Exact", value=2, min_value=0),
     }
+
+    if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
+        
     older_than = st.date_input("Older than", value=pd.to_datetime("2023-01-01"))
     threshold_checks = {}
     for key in thresholds:
