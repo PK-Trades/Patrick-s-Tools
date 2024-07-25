@@ -15,5 +15,5 @@ st.markdown(
     """
 )
 
-st.page_link("pages/patrick-content-pruning.py", label="Content Pruning Tool", icon="1️⃣")
+st.page_link("pages/patrick-content-pruning.py", label="Content Pruning Tool", icon="1️⃣"),
 st.page_link("pages/patrick-merge-csv.py", label="Content Pruning Tool", icon="2️⃣")
