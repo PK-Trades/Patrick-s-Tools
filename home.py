@@ -16,6 +16,7 @@ st.markdown(
     Of open de sidebar door op > linksboven te klikken.
     """
 )
+st.page(home.py, label=":blue-background[HOME]", icon=":material/house:")
 
 st.page_link("pages/patrick-content-pruning.py", label=":blue-background[Content Pruning]", icon=":material/cleaning_services:")
 
