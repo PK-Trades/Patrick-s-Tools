@@ -1,5 +1,7 @@
 import streamlit as st
 
+showSidebarNavigation = false
+
 st.set_page_config(
     page_title="Patrick's Tools",
     page_icon="👋",
