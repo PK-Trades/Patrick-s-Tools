@@ -11,6 +11,6 @@ st.sidebar.success("Select a page above.")
 
 st.markdown(
     """
-    Selecteer welke tool je wilt gebruiken.
+    Selecteer in de sidebar welke tool je wilt gebruiken.
     """
 )
