@@ -1,11 +1,9 @@
 import streamlit as st
 
-[client]
-showSidebarNavigation = false
-
 st.set_page_config(
     page_title="Patrick's Tools",
     page_icon="👋",
+    initial_sidebar_state="collapsed"
 )
 
 st.write("# Welcome to Your Combined App! 👋")
