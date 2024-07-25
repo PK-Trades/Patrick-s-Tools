@@ -1,8 +1,9 @@
+import csv
+import io
 import streamlit as st
 import pandas as pd
 from dateutil import parser
-import csv
-import io
+import traceback
 
 ## Data Processing Functions
 
@@ -112,13 +113,15 @@ def main():
     
     if start_button and uploaded_file is not None:
         try:
+            # Read the CSV content
             csv_content = uploaded_file.getvalue().decode('utf-8')
-            delimiter = detect_delimiter(csv_content)
-            if delimiter is None:
-                st.error("Could not determine delimiter. Please check your CSV file format.")
-                return
             
-            data = pd.read_csv(io.StringIO(csv_content), delimiter=delimiter, low_memory=False)
+            # Use CSV Sniffer to detect the dialect and delimiter
+            sniffer = csv.Sniffer()
+            dialect = sniffer.sniff(csv_content[:1024])
+            
+            # Read the CSV using the detected dialect
+            data = pd.read_csv(io.StringIO(csv_content), dialect=dialect)
             
             # Display the first few rows of the DataFrame
             st.write("Preview of the uploaded data:")
