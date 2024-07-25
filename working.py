@@ -91,7 +91,7 @@ def main():
         'Ahrefs Keywords Top 10 - Exact': st.number_input("Ahrefs Keywords Top 10 - Exact", value=2, min_value=0),
     }
 
-    if __name__ == "__main__":
+if __name__ == "__main__":
     try:
         main()
     except Exception as e:
