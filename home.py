@@ -17,6 +17,6 @@ st.markdown(
     """
 )
 
-st.page_link("pages/patrick-content-pruning.py", label=":blue-background[Content Pruning]", icon="material/cleaning_services:")
+st.page_link("pages/patrick-content-pruning.py", label=":blue-background[Content Pruning]", icon=":material/cleaning_services:")
 
 st.page_link("pages/Patrick-merge-csv.py", label=":blue-background[CSV Merge]", icon=":material/csv:")
