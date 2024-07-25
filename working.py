@@ -118,13 +118,7 @@ def main():
             
             # Read the CSV using the detected delimiter
             data = pd.read_csv(io.StringIO(csv_content), sep=delimiter, engine='python')
-            
-            st.write("Preview of the uploaded data:")
-            st.write(data.head())
-            
-            st.write("Columns found in the CSV file:")
-            st.write(list(data.columns))
-            
+                       
             required_columns = ['Sessions', 'Views', 'Clicks', 'Impressions', 'Average position', 'Ahrefs Backlinks - Exact', 'Word Count', 'Laatste wijziging', 'Unique Inlinks']
             missing_columns = [col for col in required_columns if col not in data.columns]
             
