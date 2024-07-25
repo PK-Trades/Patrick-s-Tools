@@ -65,27 +65,19 @@ def display_results(data):
             mime="text/csv"
         )
 
-def convert_semicolon_to_comma(file_content):
-    df = pd.read_csv(io.StringIO(file_content), sep=';')
-    return df.to_csv(index=False)
-
-def detect_delimiter(file_content, sample_size=1024):
+def detect_delimiter(file_content):
     sniffer = csv.Sniffer()
-    delimiters = [',', ';', '\t', '|']
-    
     try:
-        dialect = sniffer.sniff(file_content[:sample_size])
+        dialect = sniffer.sniff(file_content[:1024])
         return dialect.delimiter
-    except:
-        pass
-    
-    for delimiter in delimiters:
-        try:
-            pd.read_csv(io.StringIO(file_content[:sample_size]), sep=delimiter, engine='python')
-            return delimiter
-        except:
-            continue
-    
+    except csv.Error:
+        # If sniffer fails, try common delimiters
+        for delimiter in [',', ';', '\t', '|']:
+            try:
+                pd.read_csv(io.StringIO(file_content[:1024]), sep=delimiter, nrows=5)
+                return delimiter
+            except:
+                continue
     return None
 
 ## Main Application Logic
@@ -116,17 +108,15 @@ def main():
     if start_button and uploaded_file is not None:
         try:
             csv_content = uploaded_file.getvalue().decode('utf-8')
+            
+            # Detect the delimiter
             delimiter = detect_delimiter(csv_content)
             
             if delimiter is None:
                 st.error("Could not determine delimiter. Please check your CSV file format.")
                 return
             
-            if delimiter == ';':
-                st.info("Semicolon delimiter detected. Converting to comma delimiter.")
-                csv_content = convert_semicolon_to_comma(csv_content)
-                delimiter = ','
-            
+            # Read the CSV using the detected delimiter
             data = pd.read_csv(io.StringIO(csv_content), sep=delimiter, engine='python')
             
             st.write("Preview of the uploaded data:")
