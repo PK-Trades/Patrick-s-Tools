@@ -18,4 +18,6 @@ st.page_link("home.py", label="Home", icon=":material/house:")
 
 st.page_link("pages/patrick-content-pruning.py", label=":blue-background[Content Pruning]", icon=":material/cleaning_services:")
 
-st.page_link("pages/Patrick-merge-csv.py", label=":blue-background[CSV Merge]", icon=":material/csv:")
+st.page_link("pages/Patrick-merge-csv.py", label=":blue-background[CSV Merge]", icon=":material/join:")
+
+st.page_link("pages/csv-delimiter-converter.py", label=":blue-background[CSV Delimiter Converter]", icon=":material/csv:")
