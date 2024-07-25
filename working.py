@@ -90,15 +90,35 @@ def main():
         'Ahrefs Keywords Top 3 - Exact': st.number_input("Ahrefs Keywords Top 3 - Exact", value=1, min_value=0),
         'Ahrefs Keywords Top 10 - Exact': st.number_input("Ahrefs Keywords Top 10 - Exact", value=2, min_value=0),
     }
-
-if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
-        
     older_than = st.date_input("Older than", value=pd.to_datetime("2023-01-01"))
     threshold_checks = {}
     for key in thresholds:
         threshold_checks[key] = st.checkbox(f"Apply {key} threshold", value=True)
     output_mode = st.radio("Output mode", ["Show all URLs", "Show only URLs with actions"])
+    start_button = st.button("Start Processing")
+    if start_button and uploaded_file is not None:
+        try:
+            csv_content = uploaded_file.getvalue().decode('utf-8')
+            dialect = csv.Sniffer().sniff(csv_content[:1024])
+            delimiter = dialect.delimiter
+            csv_file = io.StringIO(csv_content)
+            data = pd.read_csv(csv_file, delimiter=delimiter)
+            required_columns = ['Sessions', 'Views', 'Clicks', 'Impressions', 'Average position', 'Ahrefs Backlinks - Exact', 'Word Count', 'Laatste wijziging', 'Unique Inlinks']
+            missing_columns = [col for col in required_columns if col not in data.columns]
+            if missing_columns:
+                st.error(f"Missing columns in CSV: {', '.join(missing_columns)}")
+            else:
+                applied_thresholds = {k: v for k, v in thresholds.items() if threshold_checks[k]}
+                processed_data = process_data(data, applied_thresholds, older_than)
+                if output_mode == "Show only URLs with actions":
+                    action_data = processed_data[processed_data['Action']!= 'Geen actie']
+                else:
+                    action_data = processed_data
+                display_results(action_data)
+        except Exception as e:
+            st.error(f"Failed to process CSV file: {str(e)}")
+    elif start_button and uploaded_file is None:
+        st.error("Please upload a CSV file before starting the process.")
+
+if __name__ == "__main__":
+    main()
