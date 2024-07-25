@@ -1,7 +1,7 @@
 import streamlit as st
 
 [client]
-    showSidebarNavigation = false
+showSidebarNavigation = false
 
 st.set_page_config(
     page_title="Patrick's Tools",
