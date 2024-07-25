@@ -1,8 +1,8 @@
-import csv
-import io
 import streamlit as st
 import pandas as pd
 from dateutil import parser
+import csv
+import io
 import traceback
 
 ## Data Processing Functions
@@ -70,20 +70,26 @@ def display_results(data):
         )
 
 ### Function to detect delimiter
-def detect_delimiter(file_content):
+def detect_delimiter(file_content, sample_size=1024):
     sniffer = csv.Sniffer()
+    delimiters = [',', ';', '\t', '|']  # Common delimiters to check
+    
+    # Try with CSV Sniffer first
     try:
-        dialect = sniffer.sniff(file_content[:1024])
+        dialect = sniffer.sniff(file_content[:sample_size])
         return dialect.delimiter
     except:
-        # If sniffer fails, try common delimiters
-        common_delimiters = [',', ';', '\t', '|']
-        for delimiter in common_delimiters:
-            try:
-                pd.read_csv(io.StringIO(file_content), sep=delimiter, nrows=5)
-                return delimiter
-            except:
-                continue
+        pass
+    
+    # Fallback: Check for common delimiters
+    for delimiter in delimiters:
+        try:
+            pd.read_csv(io.StringIO(file_content[:sample_size]), sep=delimiter, engine='python')
+            return delimiter
+        except:
+            continue
+    
+    # If all else fails, return None
     return None
 
 ## Main Application Logic
@@ -116,12 +122,15 @@ def main():
             # Read the CSV content
             csv_content = uploaded_file.getvalue().decode('utf-8')
             
-            # Use CSV Sniffer to detect the dialect and delimiter
-            sniffer = csv.Sniffer()
-            dialect = sniffer.sniff(csv_content[:1024])
+            # Detect delimiter
+            delimiter = detect_delimiter(csv_content)
             
-            # Read the CSV using the detected dialect
-            data = pd.read_csv(io.StringIO(csv_content), dialect=dialect)
+            if delimiter is None:
+                st.error("Could not determine delimiter. Please check your CSV file format.")
+                return
+            
+            # Read the CSV using the detected delimiter
+            data = pd.read_csv(io.StringIO(csv_content), sep=delimiter, engine='python')
             
             # Display the first few rows of the DataFrame
             st.write("Preview of the uploaded data:")
