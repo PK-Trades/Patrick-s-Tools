@@ -7,48 +7,78 @@ import traceback
 
 ## Data Processing Functions
 
-### Function to parse date strings
 def parse_date(date_string):
     try:
         return parser.parse(date_string).date()
     except (ValueError, TypeError):
         return None
 
-### Function to process data
 def process_data(data, thresholds, older_than_date):
-    # ... (keep the rest of this function as it was)
+    data['Average position'] = data['Average position'].astype(float)
+    data['Laatste wijziging'] = data['Laatste wijziging'].astype(str).apply(parse_date)
+    data['Unique Inlinks'] = data['Unique Inlinks'].astype(int)
+
+    def should_delete(row):
+        conditions = []
+        for key, value in thresholds.items():
+            if key == 'Average position':
+                conditions.append(row[key] > value)
+            elif key in row:
+                conditions.append(row[key] < value)
+            elif key == 'Ahrefs URL Rating - Exact':
+                conditions.append(row[key] < value)
+            elif key == 'Ahrefs Keywords Top 3 - Exact':
+                conditions.append(row[key] < value)
+            elif key == 'Ahrefs Keywords Top 10 - Exact':
+                conditions.append(row[key] < value)
+        if older_than_date and row['Laatste wijziging']:
+            conditions.append(row['Laatste wijziging'] < older_than_date)
+        return all(conditions)
+
+    data['To Delete'] = data.apply(should_delete, axis=1)
+    data['Backlinks controleren'] = (data['To Delete'] & (data['Ahrefs Backlinks - Exact'] > thresholds.get('Backlinks', float('inf'))))
+    data['Action'] = 'Geen actie'
+    data.loc[data['To Delete'], 'Action'] = 'Verwijderen'
+    data.loc[data['Backlinks controleren'], 'Action'] = 'Backlinks controleren'
+    return data
 
 ## UI Setup Functions
 
-### Function to set up the UI
 def setup_ui():
-    # ... (keep this function as it was)
+    st.title("Patrick's Cleanup Tool")
+    st.markdown("Hier onder kun je aangeven waar je post :blue-background[minimaal] aan moet voldoen om :blue-background[niet] in aanmerking te komen voor verwijdering.")
+    st.markdown("Wanneer je dus een waarde van 1000 invult bij Sessions komen alle URLs met minder dan 1000 sessie in aanmerking voor verwijderen (als alle overige metrics ook kloppen)")
+    st.markdown("Maak een kopie van het template hieronder en vul deze met jouw data. ")
+    st.markdown("Vervolgens kun je hem hierboven uploaden en zal de tool aan de hand van de door jou ingestelde criteria de URLs die wegkunnen markeren")
+    st.markdown("[het template hieronder](https://docs.google.com/spreadsheets/d/1GtaLaXO62Rf8Xo2gNiw6wkAXrHoE-bBJr8Uf3_e8lNw/edit?usp=sharing)")
 
-### Function to display results
 def display_results(data):
-    # ... (keep this function as it was)
+    if data.empty:
+        st.write("No URLs require action.")
+    else:
+        st.dataframe(data)
+        csv_string = data.to_csv(index=False)
+        st.download_button(
+            label="Download CSV",
+            data=csv_string,
+            file_name="processed_data.csv",
+            mime="text/csv"
+        )
 
-### Function to convert semicolon to comma delimiter
 def convert_semicolon_to_comma(file_content):
-    # Read the CSV content with semicolon delimiter
     df = pd.read_csv(io.StringIO(file_content), sep=';')
-    
-    # Convert the DataFrame back to CSV string with comma delimiter
     return df.to_csv(index=False)
 
-### Function to detect delimiter
 def detect_delimiter(file_content, sample_size=1024):
     sniffer = csv.Sniffer()
-    delimiters = [',', ';', '\t', '|']  # Common delimiters to check
+    delimiters = [',', ';', '\t', '|']
     
-    # Try with CSV Sniffer first
     try:
         dialect = sniffer.sniff(file_content[:sample_size])
         return dialect.delimiter
     except:
         pass
     
-    # Fallback: Check for common delimiters
     for delimiter in delimiters:
         try:
             pd.read_csv(io.StringIO(file_content[:sample_size]), sep=delimiter, engine='python')
@@ -56,7 +86,6 @@ def detect_delimiter(file_content, sample_size=1024):
         except:
             continue
     
-    # If all else fails, return None
     return None
 
 ## Main Application Logic
@@ -86,30 +115,23 @@ def main():
     
     if start_button and uploaded_file is not None:
         try:
-            # Read the CSV content
             csv_content = uploaded_file.getvalue().decode('utf-8')
-            
-            # Detect delimiter
             delimiter = detect_delimiter(csv_content)
             
             if delimiter is None:
                 st.error("Could not determine delimiter. Please check your CSV file format.")
                 return
             
-            # If delimiter is semicolon, convert to comma
             if delimiter == ';':
                 st.info("Semicolon delimiter detected. Converting to comma delimiter.")
                 csv_content = convert_semicolon_to_comma(csv_content)
                 delimiter = ','
             
-            # Read the CSV using the detected (or converted) delimiter
             data = pd.read_csv(io.StringIO(csv_content), sep=delimiter, engine='python')
             
-            # Display the first few rows of the DataFrame
             st.write("Preview of the uploaded data:")
             st.write(data.head())
             
-            # Display all column names
             st.write("Columns found in the CSV file:")
             st.write(list(data.columns))
             
