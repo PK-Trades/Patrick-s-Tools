@@ -6,13 +6,14 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-st.write("# Welcome to Your Combined App! 👋")
+st.write("# Patrick's SEO Tools! 👋")
 
-st.sidebar.success("Select a page above.")
+st.sidebar.success("Kies jouw tool hierboven.")
 
 st.markdown(
     """
-    Selecteer in de sidebar welke tool je wilt gebruiken.
+    Selecteer hieronder welke tool je wilt gebruiken.
+    Of open de sidebar door op > linksboven te klikken.
     """
 )
 
