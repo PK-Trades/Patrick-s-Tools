@@ -8,8 +8,6 @@ st.set_page_config(
 
 st.write("# Patrick's SEO Tools! 👋")
 
-st.sidebar.success("Kies jouw tool hierboven.")
-
 st.markdown(
     """
     Selecteer hieronder welke tool je wilt gebruiken.
