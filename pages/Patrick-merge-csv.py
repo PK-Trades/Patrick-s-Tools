@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 import csv
 import io
+import re
 
 def detect_delimiter(file):
     sample = file.read(1024).decode('utf-8')
@@ -12,9 +13,9 @@ def detect_delimiter(file):
 
 def standardize_urls(df):
     df['URL'] = df['URL'].str.lower().str.strip()
-    df['URL'] = df['URL'].str.replace('www.', '', regex=False)
+    df['URL'] = df['URL'].str.replace(r'^(https?://)?(www\.)?', '', regex=True)
     df['URL'] = df['URL'].str.rstrip('/')
-    df['URL'] = df['URL'].apply(lambda x: 'https://' + x if not x.startswith('https://') else x)
+    df['URL'] = 'https://' + df['URL']
     return df
 
 def merge_csvs(file1, file2):
@@ -40,16 +41,20 @@ def merge_csvs(file1, file2):
     df2 = standardize_urls(df2)
 
     # Merge the dataframes on the URL column
-    merged_df = pd.merge(df1, df2, on='URL', how='inner')
+    merged_df = pd.merge(df1, df2, on='URL', how='outer', indicator=True)
+
+    # Identify rows that didn't match
+    unmatched = merged_df[merged_df['_merge'] != 'both']
+    merged_df = merged_df[merged_df['_merge'] == 'both'].drop(columns=['_merge'])
 
     if merged_df.empty:
         st.warning("No matching URLs found between the two files.")
-        return None
+        return None, unmatched
 
     # Drop the 'Unnamed: 3' column if it exists
     merged_df = merged_df.drop(columns=['Unnamed: 3'], errors='ignore')
 
-    return merged_df
+    return merged_df, unmatched
 
 st.title("Patrick's CSV Merger")
 
@@ -60,12 +65,12 @@ file2 = st.file_uploader("Upload File 2", type="csv")
 
 if file1 and file2:
     if st.button("Merge CSVs"):
-        merged_df = merge_csvs(file1, file2)
+        merged_df, unmatched = merge_csvs(file1, file2)
         if merged_df is not None:
             st.success(f"Files merged successfully! Rows: {merged_df.shape[0]}, Columns: {merged_df.shape[1]}")
             st.dataframe(merged_df.head())
 
-            # Provide download link for merged CSV
+            # Provide download links for merged CSV and unmatched rows
             csv = merged_df.to_csv(index=False)
             st.download_button(
                 label="Download merged CSV",
@@ -73,5 +78,15 @@ if file1 and file2:
                 file_name="merged_csv.csv",
                 mime="text/csv"
             )
+
+            if not unmatched.empty:
+                st.warning(f"There were {len(unmatched)} unmatched rows.")
+                unmatched_csv = unmatched.to_csv(index=False)
+                st.download_button(
+                    label="Download unmatched rows",
+                    data=unmatched_csv,
+                    file_name="unmatched_rows.csv",
+                    mime="text/csv"
+                )
 else:
     st.info("Please upload both CSV files to merge.")
