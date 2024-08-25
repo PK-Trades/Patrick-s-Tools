@@ -92,7 +92,7 @@ def main() -> None:
         'Clicks': st.number_input("Clicks", value=50, min_value=0),
         'Impressions': st.number_input("Impressions", value=500, min_value=0),
         'Average position': st.number_input("Average position", value=19.0, min_value=0.0),
-        'Backlinks': st.number_input("Backlinks", value=1, min_value=0),
+        'Ahrefs Backlinks - Exact': st.number_input("Backlinks", value=1, min_value=0),
         'Word Count': st.number_input("Word Count", value=500, min_value=0),
         'Unique Inlinks': st.number_input("Unique Inlinks", value=0, min_value=0),
         'Ahrefs URL Rating - Exact': st.number_input("Ahrefs URL Rating - Exact", value=5, min_value=0),
@@ -119,17 +119,19 @@ def main() -> None:
                 'clicks': 'Clicks',
                 'impressions': 'Impressions',
                 'average position': 'Average position',
-                'ahrefs backlinks - exact': 'Backlinks',
+                'ahrefs backlinks - exact': 'Ahrefs Backlinks - Exact',
                 'word count': 'Word Count',
                 'laatste wijziging': 'Laatste wijziging',
                 'unique inlinks': 'Unique Inlinks',
+                'ahrefs keywords top 3 - exact': 'Ahrefs Keywords Top 3 - Exact',
+                'ahrefs keywords top 10 - exact': 'Ahrefs Keywords Top 10 - Exact',
             }
             
             # Rename columns if they exist
             data = data.rename(columns={k: v for k, v in column_mapping.items() if k in data.columns})
             
             required_columns = ['Laatste wijziging'] + [col for col in thresholds if threshold_checks[col]]
-            missing_columns = [col for col in required_columns if col.lower() not in data.columns]
+            missing_columns = [col for col in required_columns if col not in data.columns]
             
             if missing_columns:
                 st.error(f"Missing columns in CSV: {', '.join(missing_columns)}")
