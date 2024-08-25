@@ -4,39 +4,40 @@ from dateutil import parser
 import csv
 import io
 import traceback
+from typing import Dict, Any
 
 ## Data Processing Functions
 
-def parse_date(date_string):
+def parse_date(date_string: str) -> pd.Timestamp:
     try:
-        return parser.parse(date_string).date()
+        return pd.to_datetime(date_string).date()
     except (ValueError, TypeError):
-        return None
+        return pd.NaT
 
-def process_data(data, thresholds, older_than_date):
-    data['Average position'] = data['Average position'].astype(float)
-    data['Laatste wijziging'] = data['Laatste wijziging'].astype(str).apply(parse_date)
-    data['Unique Inlinks'] = data['Unique Inlinks'].astype(int)
+def process_data(data: pd.DataFrame, thresholds: Dict[str, float], older_than_date: pd.Timestamp) -> pd.DataFrame:
+    # Convert columns to appropriate types
+    if 'Average position' in data.columns:
+        data['Average position'] = pd.to_numeric(data['Average position'], errors='coerce')
+    data['Laatste wijziging'] = pd.to_datetime(data['Laatste wijziging'], errors='coerce').dt.date
+    if 'Unique Inlinks' in data.columns:
+        data['Unique Inlinks'] = pd.to_numeric(data['Unique Inlinks'], errors='coerce').astype('Int64')
 
-    def should_delete(row):
+    def should_delete(row: pd.Series) -> bool:
         conditions = []
         for key, value in thresholds.items():
-            if key == 'Average position':
-                conditions.append(row[key] > value)
-            elif key in row:
-                conditions.append(row[key] < value)
-            elif key == 'Ahrefs URL Rating - Exact':
-                conditions.append(row[key] < value)
-            elif key == 'Ahrefs Keywords Top 3 - Exact':
-                conditions.append(row[key] < value)
-            elif key == 'Ahrefs Keywords Top 10 - Exact':
-                conditions.append(row[key] < value)
-        if older_than_date and row['Laatste wijziging']:
+            if key in row:
+                if key == 'Average position':
+                    conditions.append(row[key] > value)
+                else:
+                    conditions.append(row[key] < value)
+        if older_than_date and pd.notnull(row['Laatste wijziging']):
             conditions.append(row['Laatste wijziging'] < older_than_date)
         return all(conditions)
 
     data['To Delete'] = data.apply(should_delete, axis=1)
-    data['Backlinks controleren'] = (data['To Delete'] & (data['Ahrefs Backlinks - Exact'] > thresholds.get('Backlinks', float('inf'))))
+    data['Backlinks controleren'] = (data['To Delete'] & 
+                                     (data['Ahrefs Backlinks - Exact'] > thresholds.get('Backlinks', float('inf'))) 
+                                     if 'Ahrefs Backlinks - Exact' in data.columns else False)
     data['Action'] = 'Geen actie'
     data.loc[data['To Delete'], 'Action'] = 'Verwijderen'
     data.loc[data['Backlinks controleren'], 'Action'] = 'Backlinks controleren'
@@ -52,7 +53,7 @@ def setup_ui():
     st.markdown("Vervolgens kun je hem hierboven uploaden en zal de tool aan de hand van de door jou ingestelde criteria de URLs die wegkunnen markeren")
     st.markdown("[het template hieronder](https://docs.google.com/spreadsheets/d/1GtaLaXO62Rf8Xo2gNiw6wkAXrHoE-bBJr8Uf3_e8lNw/edit?usp=sharing)")
 
-def display_results(data):
+def display_results(data: pd.DataFrame) -> None:
     if data.empty:
         st.write("No URLs require action.")
     else:
@@ -65,7 +66,7 @@ def display_results(data):
             mime="text/csv"
         )
 
-def detect_delimiter(file_content):
+def detect_delimiter(file_content: str) -> str:
     sniffer = csv.Sniffer()
     try:
         dialect = sniffer.sniff(file_content[:1024])
@@ -78,11 +79,11 @@ def detect_delimiter(file_content):
                 return delimiter
             except:
                 continue
-    return None
+    return ','  # Default to comma if no delimiter is detected
 
 ## Main Application Logic
 
-def main():
+def main() -> None:
     setup_ui()
     uploaded_file = st.file_uploader("Select CSV file", type="csv")
     thresholds = {
@@ -99,39 +100,26 @@ def main():
         'Ahrefs Keywords Top 10 - Exact': st.number_input("Ahrefs Keywords Top 10 - Exact", value=2, min_value=0),
     }
     older_than = st.date_input("Older than", value=pd.to_datetime("2023-01-01"))
-    threshold_checks = {}
-    for key in thresholds:
-        threshold_checks[key] = st.checkbox(f"Apply {key} threshold", value=True)
+    threshold_checks = {key: st.checkbox(f"Apply {key} threshold", value=True) for key in thresholds}
     output_mode = st.radio("Output mode", ["Show all URLs", "Show only URLs with actions"])
     start_button = st.button("Start Processing")
     
     if start_button and uploaded_file is not None:
         try:
             csv_content = uploaded_file.getvalue().decode('utf-8')
-            
-            # Detect the delimiter
             delimiter = detect_delimiter(csv_content)
-            
-            if delimiter is None:
-                st.error("Could not determine delimiter. Please check your CSV file format.")
-                return
-            
-            # Read the CSV using the detected delimiter
             data = pd.read_csv(io.StringIO(csv_content), sep=delimiter, engine='python')
-                       
-            required_columns = ['Sessions', 'Views', 'Clicks', 'Impressions', 'Average position', 'Ahrefs Backlinks - Exact', 'Word Count', 'Laatste wijziging', 'Unique Inlinks']
+            
+            required_columns = ['Laatste wijziging'] + [col for col in thresholds if threshold_checks[col]]
             missing_columns = [col for col in required_columns if col not in data.columns]
             
             if missing_columns:
                 st.error(f"Missing columns in CSV: {', '.join(missing_columns)}")
-                st.write("Please ensure your CSV file contains all required columns.")
+                st.write("Please ensure your CSV file contains all required columns for the enabled thresholds.")
             else:
                 applied_thresholds = {k: v for k, v in thresholds.items() if threshold_checks[k]}
                 processed_data = process_data(data, applied_thresholds, older_than)
-                if output_mode == "Show only URLs with actions":
-                    action_data = processed_data[processed_data['Action'] != 'Geen actie']
-                else:
-                    action_data = processed_data
+                action_data = processed_data[processed_data['Action'] != 'Geen actie'] if output_mode == "Show only URLs with actions" else processed_data
                 display_results(action_data)
         except Exception as e:
             st.error(f"Failed to process CSV file: {str(e)}")
