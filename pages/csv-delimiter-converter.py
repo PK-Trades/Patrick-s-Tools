@@ -1,13 +1,16 @@
 import streamlit as st
 import pandas as pd
 import io
-import chardet
 
 def detect_encoding(file):
-    # Detect the file encoding
-    raw_data = file.read()
-    file.seek(0)  # Reset file pointer
-    return chardet.detect(raw_data)['encoding']
+    # Try to decode with utf-8 first, then fallback to latin-1
+    try:
+        file.read().decode('utf-8')
+        file.seek(0)
+        return 'utf-8'
+    except UnicodeDecodeError:
+        file.seek(0)
+        return 'latin-1'
 
 def convert_csv(input_file):
     try:
