@@ -111,7 +111,7 @@ def main() -> None:
             data = pd.read_csv(io.StringIO(csv_content), sep=delimiter, engine='python', encoding='utf-8')
             
             # Convert column names to lowercase for case-insensitive matching
-            data.columns = data.columns.str.lower()
+            data.columns = data.columns.str.lower().str.strip()
             
             column_mapping = {
                 'sessions': 'Sessions',
@@ -125,10 +125,11 @@ def main() -> None:
                 'unique inlinks': 'Unique Inlinks',
             }
             
-            data = data.rename(columns=column_mapping)
+            # Rename columns if they exist
+            data = data.rename(columns={k: v for k, v in column_mapping.items() if k in data.columns})
             
             required_columns = ['Laatste wijziging'] + [col for col in thresholds if threshold_checks[col]]
-            missing_columns = [col for col in required_columns if col not in data.columns]
+            missing_columns = [col for col in required_columns if col.lower() not in data.columns]
             
             if missing_columns:
                 st.error(f"Missing columns in CSV: {', '.join(missing_columns)}")
