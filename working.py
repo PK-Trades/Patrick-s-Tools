@@ -108,7 +108,24 @@ def main() -> None:
         try:
             csv_content = uploaded_file.getvalue().decode('utf-8')
             delimiter = detect_delimiter(csv_content)
-            data = pd.read_csv(io.StringIO(csv_content), sep=delimiter, engine='python')
+            data = pd.read_csv(io.StringIO(csv_content), sep=delimiter, engine='python', encoding='utf-8')
+            
+            # Convert column names to lowercase for case-insensitive matching
+            data.columns = data.columns.str.lower()
+            
+            column_mapping = {
+                'sessions': 'Sessions',
+                'views': 'Views',
+                'clicks': 'Clicks',
+                'impressions': 'Impressions',
+                'average position': 'Average position',
+                'ahrefs backlinks - exact': 'Backlinks',
+                'word count': 'Word Count',
+                'laatste wijziging': 'Laatste wijziging',
+                'unique inlinks': 'Unique Inlinks',
+            }
+            
+            data = data.rename(columns=column_mapping)
             
             required_columns = ['Laatste wijziging'] + [col for col in thresholds if threshold_checks[col]]
             missing_columns = [col for col in required_columns if col not in data.columns]
@@ -116,6 +133,7 @@ def main() -> None:
             if missing_columns:
                 st.error(f"Missing columns in CSV: {', '.join(missing_columns)}")
                 st.write("Please ensure your CSV file contains all required columns for the enabled thresholds.")
+                st.write("Available columns:", ', '.join(data.columns))
             else:
                 applied_thresholds = {k: v for k, v in thresholds.items() if threshold_checks[k]}
                 processed_data = process_data(data, applied_thresholds, older_than)
