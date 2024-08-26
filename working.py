@@ -140,6 +140,18 @@ def main() -> None:
             else:
                 applied_thresholds = {k: v for k, v in thresholds.items() if threshold_checks[k]}
                 processed_data = process_data(data, applied_thresholds, older_than)
+                
+                # Count URLs that meet the criteria
+                urls_to_action = processed_data[processed_data['Action'] != 'Geen actie']
+                urls_to_delete = processed_data[processed_data['Action'] == 'Verwijderen']
+                urls_to_check_backlinks = processed_data[processed_data['Action'] == 'Backlinks controleren']
+                
+                # Display counts
+                st.write(f"Total URLs processed: {len(processed_data)}")
+                st.write(f"URLs that meet deletion criteria: {len(urls_to_delete)}")
+                st.write(f"URLs that need backlink checking: {len(urls_to_check_backlinks)}")
+                st.write(f"Total URLs requiring action: {len(urls_to_action)}")
+
                 action_data = processed_data[processed_data['Action'] != 'Geen actie'] if output_mode == "Show only URLs with actions" else processed_data
                 display_results(action_data)
         except Exception as e:
