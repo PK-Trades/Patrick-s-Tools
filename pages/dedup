@@ -1,0 +1,28 @@
+import streamlit as st
+import pandas as pd
+
+def remove_duplicates(df1, df2):
+    combined = pd.concat([df1, df2])
+    return combined.drop_duplicates(keep='first')
+
+st.title('CSV Duplicate Remover')
+
+file1 = st.file_uploader("Upload first CSV file", type="csv")
+file2 = st.file_uploader("Upload second CSV file", type="csv")
+
+if file1 and file2:
+    df1 = pd.read_csv(file1)
+    df2 = pd.read_csv(file2)
+    
+    result = remove_duplicates(df1, df2)
+    
+    st.write("Resulting DataFrame:")
+    st.dataframe(result)
+    
+    csv = result.to_csv(index=False)
+    st.download_button(
+        label="Download result as CSV",
+        data=csv,
+        file_name="result_without_duplicates.csv",
+        mime="text/csv",
+    )
